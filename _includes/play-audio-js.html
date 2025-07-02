@@ -1,0 +1,151 @@
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+      // Инициализация элементов управления плеером
+      const audioPlayer = document.getElementById("audio-player");
+      const playPauseBtn = document.getElementById("play-pause-btn");
+      const progressBar = document.querySelector(".progress-bar");
+      const currentTimeDisplay = document.getElementById("current-time");
+      const durationDisplay = document.getElementById("duration");
+
+      // Динамическая подстановка ссылки на аудиофайл
+      const permalink = "{{ page.permalink }}";
+      const source = audioPlayer.querySelector("source");
+
+      // Функция для проверки существования файла по URL (через HTTP HEAD)
+      const checkFileExists = async (url) => {
+          try {
+              const response = await fetch(url, { method: "HEAD" });
+              return response.ok;
+          } catch (error) {
+              console.error("Ошибка при проверке файла:", error);
+              return false;
+          }
+      };
+
+      // Попытка установить источник аудио: сначала mp3, затем m4a
+      const trySetSource = async () => {
+          const mp3Url = `/assets/audio${permalink}.mp3`;
+          const m4aUrl = `/assets/audio${permalink}.m4a`;
+
+          const mp3Exists = await checkFileExists(mp3Url);
+          if (mp3Exists) {
+              source.src = mp3Url;
+          } else {
+              const m4aExists = await checkFileExists(m4aUrl);
+              if (m4aExists) {
+                  source.src = m4aUrl;
+              } else {
+                  console.error("Файлы не найдены.");
+                  return;
+              }
+          }
+
+          audioPlayer.load();
+      };
+
+      // Устанавливаем источник аудио
+      trySetSource();
+
+      // Переменная для контроля автозапуска
+      let autoPlayDisabled = true;
+
+      // При загрузке метаданных задаём начальную точку воспроизведения
+      audioPlayer.addEventListener("loadedmetadata", () => {
+          const now = new Date();
+          const currentMinute = now.getMinutes();
+          const currentSecond = now.getSeconds();
+
+          // Устанавливаем текущую позицию воспроизведения
+          audioPlayer.currentTime = currentMinute * 60 + currentSecond;
+
+          // Обновляем прогресс-бар и отображаем продолжительность
+          updateProgressBar();
+          durationDisplay.textContent = formatTime(audioPlayer.duration);
+
+          // Пытаемся запустить автоплей
+          attemptAutoPlay();
+      });
+
+      // Функция для попытки автозапуска
+      function attemptAutoPlay() {
+          audioPlayer.play()
+              .then(() => {
+                  console.log("Автозапуск успешно выполнен");
+                  playPauseBtn.classList.remove("paused");
+                  playPauseBtn.classList.add("playing");
+                  autoPlayDisabled = false;
+              })
+              .catch(error => {
+                  console.error("Автозапуск блокирован:", error);
+                  autoPlayDisabled = true;
+                  enableAutoPlayOnInteraction();
+              });
+      }
+
+      // Функция включения автозапуска при взаимодействии пользователя
+      function enableAutoPlayOnInteraction() {
+          const interactionHandler = () => {
+              if (autoPlayDisabled) {
+                  attemptAutoPlay();
+              }
+              document.removeEventListener("click", interactionHandler);
+              document.removeEventListener("keydown", interactionHandler);
+              document.removeEventListener("mousemove", interactionHandler);
+              document.removeEventListener("scroll", interactionHandler);
+          };
+
+          document.addEventListener("click", interactionHandler);
+          document.addEventListener("keydown", interactionHandler);
+          document.addEventListener("mousemove", interactionHandler);
+          document.addEventListener("scroll", interactionHandler);
+      }
+
+      // Функция переключения воспроизведения (пауза/воспроизведение)
+      function togglePlayPause() {
+          if (audioPlayer.paused) {
+              audioPlayer.play()
+                  .then(() => {
+                      playPauseBtn.classList.remove("paused");
+                      playPauseBtn.classList.add("playing");
+                  })
+                  .catch(error => {
+                      console.error("Не удалось воспроизвести:", error);
+                  });
+          } else {
+              audioPlayer.pause();
+              playPauseBtn.classList.remove("playing");
+              playPauseBtn.classList.add("paused");
+          }
+      }
+
+      // Обработка клика на кнопке воспроизведения/паузы
+      playPauseBtn.addEventListener("click", togglePlayPause);
+
+      // Обработка нажатия пробела для воспроизведения/паузы
+      document.addEventListener("keydown", (event) => {
+          if (event.code === "Space") {
+              event.preventDefault();
+              togglePlayPause();
+          }
+      });
+
+      // Функция обновления прогресс-бара
+      function updateProgressBar() {
+          if (audioPlayer.duration) {
+              const progressPercent = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+              progressBar.style.width = `${progressPercent}%`;
+              currentTimeDisplay.textContent = formatTime(audioPlayer.currentTime);
+          }
+      }
+
+      // Обновляем прогресс-бар по событиям воспроизведения
+      audioPlayer.addEventListener("timeupdate", updateProgressBar);
+
+      // Форматирование времени (минуты:секунды)
+      function formatTime(seconds) {
+          const mins = Math.floor(seconds / 60);
+          const secs = Math.floor(seconds % 60);
+          return `${mins}:${secs < 10 ? '0' + secs : secs}`;
+      }
+  });
+</script>
