@@ -1,0 +1,34 @@
+title: «Сеанс»
+description: «Сеанс» — радио киномедитаций
+baseurl: ""  # Если сайт будет на поддомене, укажите базовый URL здесь
+url: "http://seans.indexmod.xyz"  # URL для тестирования на поддомене
+
+
+# Папка для хранения 24-часовых страниц
+collections:
+  hours:
+    output: true
+    permalink: /:collection/:name  # URL-структура для каждой страницы часа
+
+# Настройка генерации страниц и их взаимодействия
+defaults:
+  - scope:
+      path: "_hours"
+      type: "hours"
+    values:
+      layout: hour
+      weekdays: "1234567"  # Показ ежедневно
+      duration: 3600  # 1 час в секундах
+
+# Подключение папок с макетами, стилями и инклюдами
+include:
+  - "_layouts"
+  - "assets"
+
+# Локальная конфигурация (если нужно)
+timezone: "Europe/Moscow"  # Укажите ваш часовой пояс
+
+# Дополнительные настройки
+markdown: kramdown
+kramdown:
+  input: GFM
